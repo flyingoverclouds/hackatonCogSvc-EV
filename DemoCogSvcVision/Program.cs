@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision;
@@ -14,10 +15,14 @@ namespace DemoCogSvcVision
 {
     class Program
     {
+        static bool runVision = false;
+        static bool runOcr = false;
+
+
         static async Task Main(string[] args)
         {
             Console.WriteLine("** Demo Cognitive Service Vision");
-            if (args.Length != 1)
+            if (args.Length < 1)
             {
                 Console.Error.WriteLine("ERROR argument missing : add image path as parameters");
                 return;
@@ -26,12 +31,82 @@ namespace DemoCogSvcVision
             Console.WriteLine($"Vision LOCATION : {DemoSettings.csVisionLocation}");
             Console.WriteLine($"Vision KEY      : {DemoSettings.csVisionKey.Substring(0,12)}....");
 
-            await AnalyzeImage(args[0]);
+            foreach(var a in args)
+            {
+                switch(a.ToLower())
+                {
+                    case "-ocr":
+                        runOcr = true;
+                        break;
+                    case "-vision":
+                        runVision = true;
+                        break;
+                 
+                }
+            }
+
+
+            if (runVision)
+                await AnalyzeImage(args[0]);
+
+            if (runOcr)
+                await OcrImage(args[0]);
+
 
 #if DEBUG
             //Console.WriteLine("\n==> Press enter to exit");
             //Console.ReadLine();
 #endif
+        }
+
+
+        static async Task OcrImage(string imgPath)
+        {
+            Console.Write("OCRing " + imgPath + " ...");
+
+            using (var stImg = new FileStream(imgPath, FileMode.Open))
+            {
+                var visionClient = new ComputerVisionClient(new ApiKeyServiceClientCredentials(DemoSettings.csVisionKey))
+                {
+                    Endpoint = DemoSettings.csVisionEndpoint
+                };
+
+                var imgOcr = await visionClient.RecognizePrintedTextInStreamAsync(true, stImg);
+
+                if (imgOcr != null)
+                {
+                    Console.WriteLine(" Ok.");
+                    PrintOcrResult(imgOcr);
+                }
+                else Console.WriteLine(" ERROR !");
+            }
+
+        }
+        static void PrintOcrResult(OcrResult imgOcr)
+        {
+            Console.WriteLine("*** OCR result : ");
+
+            Console.WriteLine($"Language      : {imgOcr.Language}");
+            Console.WriteLine($"Orientation   : {imgOcr.Orientation}");
+            Console.WriteLine($"Text angle    : {imgOcr.TextAngle}");
+            Console.WriteLine($"Regions found : {imgOcr.Regions.Count}");
+            int regionNum = 0;
+            foreach(var r in imgOcr.Regions)
+            {
+                regionNum++;
+                Console.WriteLine($"**--> REGION #{regionNum} : ({r.BoundingBox})");
+                foreach(var l in r.Lines)
+                {
+                    Console.Write($"LINE ({l.BoundingBox}) : ");
+                    foreach (var w in l.Words)
+                    {
+                        //Console.WriteLine($"WORD: ({w.BoundingBox})");
+                        Console.Write($"{w.Text} ");
+                        //Console.WriteLine();
+                    }
+                    Console.WriteLine();
+                }
+            }
         }
 
         static async Task AnalyzeImage(string imgPath)
@@ -45,7 +120,7 @@ namespace DemoCogSvcVision
                     Endpoint = DemoSettings.csVisionEndpoint
                 };
 
-                ImageAnalysis imgAnalysis;
+                
                 var features = new VisualFeatureTypes[] {
                     VisualFeatureTypes.Adult,
                     VisualFeatureTypes.Brands,
@@ -58,11 +133,12 @@ namespace DemoCogSvcVision
                     VisualFeatureTypes.Tags
                 };
 
-                imgAnalysis = await visionClient.AnalyzeImageInStreamAsync(stImg, features);
+                var imgAnalysis = await visionClient.AnalyzeImageInStreamAsync(stImg, features);
                 PrintAnalysisResult(imgAnalysis);
             }
 
         }
+
 
         static void PrintAnalysisResult(ImageAnalysis imgAn)
         {
