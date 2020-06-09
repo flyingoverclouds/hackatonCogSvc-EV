@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision;
@@ -65,7 +66,14 @@ namespace DemoCogSvcVision
 
         static void PrintAnalysisResult(ImageAnalysis imgAn)
         {
+
             Console.WriteLine("Vision Analysis result : ");
+
+            Console.WriteLine($"-- Description : ");
+            Console.WriteLine($"     |- Captions : {FormatListOf(imgAn.Description.Captions,(ImageCaption c)=> c.Text)}");
+            Console.WriteLine($"     |- Tags : {FormatListOfString(imgAn.Description.Tags)}");
+            Console.WriteLine($"-- Categories : {FormatListOf(imgAn.Categories, (Category c) => $"{c.Name} [{c.Score}]")}");
+            Console.WriteLine($"-- Tags : {FormatListOf(imgAn.Tags, (ImageTag t) => $"{t.Name} [{t.Confidence}]")}");
             Console.WriteLine($"-- Adult content : {imgAn.Adult.IsAdultContent}");
             Console.WriteLine($"     |- Adult score : {imgAn.Adult.AdultScore}");
             Console.WriteLine($"-- Gore content : {imgAn.Adult.IsGoryContent}");
@@ -73,13 +81,11 @@ namespace DemoCogSvcVision
             Console.WriteLine($"-- Racist content : {imgAn.Adult.IsRacyContent}");
             Console.WriteLine($"     |- Gore score : {imgAn.Adult.RacyScore}");
 
-            Console.WriteLine($"-- Description : ");
-            //Console.WriteLine($"     |- Captions : {FormatListOf(imgAn.Description.Captions)}");
-            Console.WriteLine($"     |- Tags : {FormatListOfString(imgAn.Description.Tags)}");
+          
         }
 
 
-        static string FormatListOf<T>(IList<T> listOf)
+        static string FormatListOf<T>(IList<T> listOf, Func<T,string> extractor )
         {
             bool notFirst = false;
             StringBuilder sb = new StringBuilder();
@@ -87,7 +93,7 @@ namespace DemoCogSvcVision
             {
                 if (notFirst)
                     sb.Append(" , ");
-                sb.Append(obj.ToString());
+                sb.Append( extractor(obj));
                 notFirst = true;
             }
             return sb.ToString();
