@@ -24,7 +24,7 @@ namespace DemoCogSvcVision
             }
             Console.WriteLine($"Vision ENDPOINT : {DemoSettings.csVisionEndpoint}");
             Console.WriteLine($"Vision LOCATION : {DemoSettings.csVisionLocation}");
-            Console.WriteLine($"Vision KEY      : {DemoSettings.csVisionKey}");
+            Console.WriteLine($"Vision KEY      : {DemoSettings.csVisionKey.Substring(0,12)}....");
 
             await AnalyzeImage(args[0]);
 
