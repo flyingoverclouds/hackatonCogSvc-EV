@@ -1,15 +1,17 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq.Expressions;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
-
+using Newtonsoft.Json;
 
 namespace DemoCogSvcVision
 {
@@ -30,8 +32,13 @@ namespace DemoCogSvcVision
             Console.WriteLine($"Vision ENDPOINT : {DemoSettings.csVisionEndpoint}");
             Console.WriteLine($"Vision LOCATION : {DemoSettings.csVisionLocation}");
             Console.WriteLine($"Vision KEY      : {DemoSettings.csVisionKey.Substring(0,12)}....");
+            Console.WriteLine($"Translator ENDPOINT : {DemoSettings.csTranslatorEndpoint}");
+            Console.WriteLine($"Translator LOCATION : {DemoSettings.csTranslatorLocation}");
+            Console.WriteLine($"Translator KEY      : {DemoSettings.csTranslatorKey.Substring(0, 12)}....");
 
-            foreach(var a in args)
+
+
+            foreach (var a in args)
             {
                 switch(a.ToLower())
                 {
@@ -50,8 +57,9 @@ namespace DemoCogSvcVision
                 await AnalyzeImage(args[0]);
 
             if (runOcr)
+            {
                 await OcrImage(args[0]);
-
+            }
 
 #if DEBUG
             //Console.WriteLine("\n==> Press enter to exit");
@@ -77,10 +85,31 @@ namespace DemoCogSvcVision
                 {
                     Console.WriteLine(" Ok.");
                     PrintOcrResult(imgOcr);
+                    string textToTranslate = GetTextFromOcrResult(imgOcr);
+                    Console.WriteLine($"Original text : {textToTranslate}");
+                    await TranslateToFrench(textToTranslate);
                 }
                 else Console.WriteLine(" ERROR !");
             }
 
+        }
+
+
+        static string GetTextFromOcrResult(OcrResult imgOcr)
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (var r in imgOcr.Regions)
+            {
+                foreach (var l in r.Lines)
+                {
+                    foreach (var w in l.Words)
+                    {
+                        sb.Append(w.Text);
+                        sb.Append(" ");
+                    }
+                }
+            }
+            return sb.ToString();
         }
         static void PrintOcrResult(OcrResult imgOcr)
         {
@@ -107,6 +136,37 @@ namespace DemoCogSvcVision
                     Console.WriteLine();
                 }
             }
+        }
+
+
+        static async Task TranslateToFrench(string textToTranslate)
+        {
+            object[] body = new object[] { new { Text = textToTranslate } };
+            var requestBody = JsonConvert.SerializeObject(body);
+
+            using (var client = new HttpClient())
+            using (var request = new HttpRequestMessage())
+            {
+                // Build the request.
+                // Set the method to Post.
+                request.Method = HttpMethod.Post;
+                // Construct the URI and add headers.
+
+                string route = "/translate?api-version=3.0&to=fr";
+                request.RequestUri = new Uri(DemoSettings.csTranslatorEndpoint + route);
+                request.Content = new StringContent(requestBody, Encoding.UTF8, "application/json");
+                request.Headers.Add("Ocp-Apim-Subscription-Key", DemoSettings.csTranslatorKey);
+                request.Headers.Add("Ocp-Apim-Subscription-Region", DemoSettings.csTranslatorLocation);
+
+                // Send the request and get response.
+                HttpResponseMessage response = await client.SendAsync(request).ConfigureAwait(false);
+
+                // Read response as a string.
+                string result = await response.Content.ReadAsStringAsync();
+
+                Console.WriteLine("RESULT OF TRANSLATION : " + result);
+            }
+
         }
 
         static async Task AnalyzeImage(string imgPath)
