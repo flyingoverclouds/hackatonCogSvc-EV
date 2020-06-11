@@ -14,11 +14,11 @@ namespace DemoEvFunctionLive
         [FunctionName("TranslateDocumentFunction")]
         public static void Run(
             [QueueTrigger("readyfortranslation", Connection = "CnxStorageAccountDemo")]string myQueueItem, // Message that trigger the function execution
-            [Queue("readyforfeatureextraction")] out string messsageForFeatureExtraction,
+            [Queue("readyforfeatureextraction", Connection = "CnxStorageAccountDemo")] out string messsageForFeatureExtraction, // OUTput paremeters used bye function runtime to push a new message in the queue 'readyforfeatureextraction'
             ILogger log)
         {
 
-            var separatorPosition = myQueueItem.IndexOf("##");
+            var separatorPosition = myQueueItem.IndexOf("##"); // parsing the message contente
             var blobname = myQueueItem.Substring(0, separatorPosition);
             var textToTranslate = myQueueItem.Substring(separatorPosition + 2); // IRL, the text to translate should be retrieve from the DB.
 
@@ -27,7 +27,10 @@ namespace DemoEvFunctionLive
             var translationResult = TranslateToFrench(textToTranslate);
 
             messsageForFeatureExtraction = blobname + "##" + translationResult;
-            
+            // HACK : the previous line use a simple formatting to send the blob name AND the translated text to the next function.
+            // In real life, we must save the original text+langguage in a DB, push only the name of the blob 
+            // eg : we can use a CosmosDB database with json document linkied to each scanned document. this json doc will be enriching by each function (OCr, then translation, then feature extraction, ...)
+
             log.LogInformation($"Translation result : {messsageForFeatureExtraction}");
         }
 
