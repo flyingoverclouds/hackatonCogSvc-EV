@@ -1,0 +1,16 @@
+{
+  // you can copy this file and named it local.settings.json (gitignored) and set the values for your dev env
+  "IsEncrypted": false,
+  "Values": {
+    "csVisionKey": "YOUR_VISION_COGNITIVESERVICE_KEY",
+    "csVisionEndpoint": "https://YOUR_VISION_COGNITIVESERVICE_NAME.cognitiveservices.azure.com/",
+    "csTranslatorKey": "YOUR_TRANSLATOR_COGNITIVESERVICE_KEY",
+    "csTranslatorEndpoint": "https://api.cognitive.microsofttranslator.com/",
+    "csTranslatorLocation": "YOUR_TRANSLATOR_COGNITIVESERVICE_REGION",
+
+    "CnxStorageAccountDemo": "UseDevelopmentStorage=true", // OR REPLACE TO YOUR BUSINESS DATA STORAGE ACCOUNT CONNECTION STRING
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true", // OR REPLACE TO YOUR FUNCTION RUNTIME STORAGE ACCOUNT CONNECTION STRING
+
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet"
+  }
+}
