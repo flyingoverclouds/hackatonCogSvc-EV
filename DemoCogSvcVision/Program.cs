@@ -19,24 +19,35 @@ namespace DemoCogSvcVision
     {
         static bool runVision = false;
         static bool runOcr = false;
-
+        static bool runForm = false;
 
         static async Task Main(string[] args)
         {
             Console.WriteLine("** Demo Cognitive Service Vision");
+            Console.WriteLine("Usage : DemoCogSvcVision.exe FULLPATHTOIMAGEFILE [-ocr] [-vision] [-form]");
+            Console.WriteLine("        -vision : analyze a picture and return informations on it (description, tabs, adult content, ...)");
+            Console.WriteLine("        -ocr    : Optical Character Regnition on the file with VisionCS, then chained with a translation to french using translatorCS");
+            Console.WriteLine("        -form   : Forms extraction in the file using the PREVIEW FormsRecognizerCS");
             if (args.Length < 1)
             {
                 Console.Error.WriteLine("ERROR argument missing : add image path as parameters");
                 return;
             }
+
+
+            // If you have compilation erreur on the DemoSettings. properties : 
+            //     - in your project copye the DemoSettings.cs file as DemoSettings.local.cs (gitignored file)
+            //     - uncomment the 9 const declaration and set the values (key, endpoint and region) in order to target YOUR cognitives service instances
+
             Console.WriteLine($"Vision ENDPOINT : {DemoSettings.csVisionEndpoint}");
             Console.WriteLine($"Vision LOCATION : {DemoSettings.csVisionLocation}");
             Console.WriteLine($"Vision KEY      : {DemoSettings.csVisionKey.Substring(0,12)}....");
             Console.WriteLine($"Translator ENDPOINT : {DemoSettings.csTranslatorEndpoint}");
             Console.WriteLine($"Translator LOCATION : {DemoSettings.csTranslatorLocation}");
             Console.WriteLine($"Translator KEY      : {DemoSettings.csTranslatorKey.Substring(0, 12)}....");
-
-
+            Console.WriteLine($"Forms Recognizer ENDPOINT : {DemoSettings.csFormsRecognizerEnpoint}");
+            Console.WriteLine($"Forms Recognizer LOCATION : {DemoSettings.csFormsRecognizerLocation}");
+            Console.WriteLine($"Forms Recognizer KEY      : {DemoSettings.csFormsRecognizerKey.Substring(0, 12)}....");
 
             foreach (var a in args)
             {
@@ -47,6 +58,9 @@ namespace DemoCogSvcVision
                         break;
                     case "-vision":
                         runVision = true;
+                        break;
+                    case "-form":
+                        runForm = true;
                         break;
                  
                 }
