@@ -5,10 +5,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq.Expressions;
 using System.Net.Http;
+using System.Net.NetworkInformation;
+using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Azure.AI.FormRecognizer;
+using Azure.AI.FormRecognizer.Models;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
 using Newtonsoft.Json;
@@ -19,15 +23,15 @@ namespace DemoCogSvcVision
     {
         static bool runVision = false;
         static bool runOcr = false;
-        static bool runForm = false;
+        static bool runForms = false;
 
         static async Task Main(string[] args)
         {
             Console.WriteLine("** Demo Cognitive Service Vision");
-            Console.WriteLine("Usage : DemoCogSvcVision.exe FULLPATHTOIMAGEFILE [-ocr] [-vision] [-form]");
+            Console.WriteLine("Usage : DemoCogSvcVision.exe FULLPATHTOIMAGEFILE [-ocr] [-vision] [-forms]");
             Console.WriteLine("        -vision : analyze a picture and return informations on it (description, tabs, adult content, ...)");
             Console.WriteLine("        -ocr    : Optical Character Regnition on the file with VisionCS, then chained with a translation to french using translatorCS");
-            Console.WriteLine("        -form   : Forms extraction in the file using the PREVIEW FormsRecognizerCS");
+            Console.WriteLine("        -forms   : extract Forms data from the file using the PREVIEW FormsRecognizerCS");
             if (args.Length < 1)
             {
                 Console.Error.WriteLine("ERROR argument missing : add image path as parameters");
@@ -59,8 +63,8 @@ namespace DemoCogSvcVision
                     case "-vision":
                         runVision = true;
                         break;
-                    case "-form":
-                        runForm = true;
+                    case "-forms":
+                        runForms = true;
                         break;
                  
                 }
@@ -71,9 +75,11 @@ namespace DemoCogSvcVision
                 await AnalyzeImage(args[0]);
 
             if (runOcr)
-            {
                 await OcrImage(args[0]);
-            }
+
+
+            if (runForms)
+                await FormsExtraction(args[0]);
 
 #if DEBUG
             //Console.WriteLine("\n==> Press enter to exit");
@@ -81,6 +87,60 @@ namespace DemoCogSvcVision
 #endif
         }
 
+
+        static async Task FormsExtraction(string imgPath)
+        {
+            // based on https://docs.microsoft.com/en-us/azure/cognitive-services/form-recognizer/quickstarts/client-library c# version
+
+            Console.Write("Extracting forms from " + imgPath + " ...");
+            using (var stImg = new FileStream(imgPath, FileMode.Open))
+            {
+                var recognizerClient = new FormRecognizerClient(
+                                            new Uri(DemoSettings.csFormsRecognizerEnpoint), 
+                                            new Azure.AzureKeyCredential(DemoSettings.csFormsRecognizerKey));
+
+                var imgForms = await recognizerClient.StartRecognizeContent(stImg  /*, new RecognizeOptions() { IncludeTextContent = true }*/ ).WaitForCompletionAsync();
+
+                if (imgForms.Value != null)
+                    PrintFormsExtractionResult(imgForms.Value);
+            }
+        }
+
+        static void PrintFormsExtractionResult(FormPageCollection imgForms)
+        {
+            Console.WriteLine("*** FormsExtraction result : ");
+            Console.WriteLine($"Forms count : {imgForms.Count}");
+            Console.WriteLine();
+
+            int formNum = 0;
+            foreach(FormPage form in imgForms)
+            {
+                formNum++;
+                Console.WriteLine($"FORM #{formNum} on page {form.PageNumber} / pos=({form.Width} , {form.Height} ) in {form.Unit} / TextAngle={form.TextAngle} / {form.Tables.Count} table(s) / {form.Lines.Count} line(s)");
+                
+                int tableNum = 0;
+                foreach (FormTable table in form.Tables)
+                {
+                    tableNum++;
+                    Console.WriteLine($"--TABLE #{tableNum} on page {table.PageNumber} / {table.ColumnCount} col(s) / {table.RowCount} row(s)");
+                    foreach(var cell in table.Cells)
+                    {
+                        Console.WriteLine($"    [{cell.ColumnIndex},{cell.RowIndex}]={cell.Text}");
+                    }
+                }
+
+
+                int lineNum = 0;
+                foreach (FormLine line in form.Lines)
+                {
+                    lineNum++;
+                    Console.WriteLine($"--LINE #{lineNum} : {line.Text}");
+                }
+
+                
+            }
+            
+        }
 
         static async Task OcrImage(string imgPath)
         {
@@ -235,7 +295,7 @@ namespace DemoCogSvcVision
         }
 
 
-        static string FormatListOf<T>(IList<T> listOf, Func<T,string> extractor )
+        static string FormatListOf<T>(IEnumerable<T> listOf, Func<T,string> extractor )
         {
             bool notFirst = false;
             StringBuilder sb = new StringBuilder();
@@ -250,7 +310,8 @@ namespace DemoCogSvcVision
         }
 
 
-        static string FormatListOfString(IList<string> listOfString)
+
+        static string FormatListOfString(IEnumerable<string> listOfString)
         {
             bool notFirst = false;
             StringBuilder sb = new StringBuilder();

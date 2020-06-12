@@ -2,7 +2,7 @@
   "profiles": {
     "DemoCogSvcVision": {
       "commandName": "Project",
-      "commandLineArgs": "\"C:\\Users\\niclerc\\Pictures\\ImgTest\\50538136-8137.tif\" -ocr"
+      "commandLineArgs": "\"C:\\Users\\niclerc\\Pictures\\ImgTest\\91696047_91696048.tif\" -forms"
     }
   }
 }
